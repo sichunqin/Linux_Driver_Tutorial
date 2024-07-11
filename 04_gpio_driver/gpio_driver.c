@@ -18,6 +18,9 @@ static struct cdev my_device;
 #define DRIVER_NAME "my_gpio_driver"
 #define DRIVER_CLASS "MyModuleClass"
 
+#define P4 512
+#define P17 513
+
 /**
  * @brief Read data out of the buffer
  */
@@ -29,8 +32,8 @@ static ssize_t driver_read(struct file *File, char *user_buffer, size_t count, l
 	to_copy = min(count, sizeof(tmp));
 
 	/* Read value of button */
-	printk("Value of button: %d\n", gpio_get_value(17));
-	tmp[0] = gpio_get_value(17) + '0';
+	printk("Value of button: %d\n", gpio_get_value(P17));
+	tmp[0] = gpio_get_value(P17) + '0';
 
 	/* Copy data to user */
 	not_copied = copy_to_user(user_buffer, &tmp, to_copy);
@@ -57,10 +60,10 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	/* Setting the LED */
 	switch(value) {
 		case '0':
-			gpio_set_value(4, 0);
+			gpio_set_value(P4, 0);
 			break;
 		case '1':
-			gpio_set_value(4, 1);
+			gpio_set_value(P4, 1);
 			break;
 		default:
 			printk("Invalid Input!\n");
@@ -111,7 +114,7 @@ static int __init ModuleInit(void) {
 	printk("read_write - Device Nr. Major: %d, Minor: %d was registered!\n", my_device_nr >> 20, my_device_nr && 0xfffff);
 
 	/* Create device class */
-	if((my_class = class_create(THIS_MODULE, DRIVER_CLASS)) == NULL) {
+	if((my_class = class_create(DRIVER_CLASS)) == NULL) {
 		printk("Device class can not be created!\n");
 		goto ClassError;
 	}
@@ -132,25 +135,25 @@ static int __init ModuleInit(void) {
 	}
 
 	/* GPIO 4 init */
-	if(gpio_request(4, "rpi-gpio-4")) {
+	if(gpio_request(P4, "rpi-gpio-4")) {
 		printk("Can not allocate GPIO 4\n");
 		goto AddError;
 	}
 
 	/* Set GPIO 4 direction */
-	if(gpio_direction_output(4, 0)) {
+	if(gpio_direction_output(P4, 0)) {
 		printk("Can not set GPIO 4 to output!\n");
 		goto Gpio4Error;
 	}
 
 	/* GPIO 17 init */
-	if(gpio_request(17, "rpi-gpio-17")) {
+	if(gpio_request(P17, "rpi-gpio-17")) {
 		printk("Can not allocate GPIO 17\n");
 		goto Gpio4Error;
 	}
 
 	/* Set GPIO 17 direction */
-	if(gpio_direction_input(17)) {
+	if(gpio_direction_input(P17)) {
 		printk("Can not set GPIO 17 to input!\n");
 		goto Gpio17Error;
 	}
@@ -158,9 +161,9 @@ static int __init ModuleInit(void) {
 
 	return 0;
 Gpio17Error:
-	gpio_free(17);
+	gpio_free(P17);
 Gpio4Error:
-	gpio_free(4);
+	gpio_free(P4);
 AddError:
 	device_destroy(my_class, my_device_nr);
 FileError:
@@ -174,9 +177,9 @@ ClassError:
  * @brief This function is called, when the module is removed from the kernel
  */
 static void __exit ModuleExit(void) {
-	gpio_set_value(4, 0);
-	gpio_free(17);
-	gpio_free(4);
+	gpio_set_value(P4, 0);
+	gpio_free(P17);
+	gpio_free(P4);
 	cdev_del(&my_device);
 	device_destroy(my_class, my_device_nr);
 	class_destroy(my_class);
